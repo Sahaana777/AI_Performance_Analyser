@@ -1,166 +1,115 @@
+import os
 from flask import Flask, render_template, jsonify
 import pandas as pd
-import os
 
 app = Flask(__name__)
 
-CSV_FILE = "data/measurements.csv"
-
-COLUMNS = [
-    "timestamp",
-    "condition",
-    "cpu_usage",
-    "ram_usage",
-    "disk_usage",
-    "data_sent_mb",
-    "data_received_mb"
-]
-
-
-def load_data():
-
-    if not os.path.exists(CSV_FILE):
-        return pd.DataFrame(columns=COLUMNS)
-
-    # First try reading normally
-    df = pd.read_csv(CSV_FILE)
-
-    # Check whether the expected columns exist
-    if not set(COLUMNS).issubset(df.columns):
-
-        # CSV probably has no header
-        df = pd.read_csv(
-            CSV_FILE,
-            header=None,
-            names=COLUMNS
-        )
-
-    # Remove completely empty rows
-    df = df.dropna(how="all")
-
-    # Convert numeric columns
-    numeric_columns = [
-        "cpu_usage",
-        "ram_usage",
-        "disk_usage",
-        "data_sent_mb",
-        "data_received_mb"
-    ]
-
-    for column in numeric_columns:
-
-        df[column] = pd.to_numeric(
-            df[column],
-            errors="coerce"
-        )
-
-    # Remove rows where the important values are invalid
-    df = df.dropna(
-        subset=[
-            "condition",
-            "cpu_usage",
-            "ram_usage"
-        ]
-    )
-
-    return df
+CSV_FILE = "data/ai_measurements.csv"
 
 
 @app.route("/")
 def home():
-
     return render_template("index.html")
 
 
 @app.route("/api/data")
 def get_data():
 
-    try:
+    if not os.path.exists(CSV_FILE):
+        return jsonify([])
 
-        df = load_data()
+    df = pd.read_csv(CSV_FILE)
 
-        return jsonify(
-            df.to_dict(orient="records")
-        )
-
-    except Exception as e:
-
-        print("DATA ERROR:", e)
-
-        return jsonify({
-            "error": str(e)
-        }), 500
+    return jsonify(
+        df.to_dict(orient="records")
+    )
 
 
 @app.route("/api/summary")
 def get_summary():
 
-    try:
+    if not os.path.exists(CSV_FILE):
+        return jsonify([])
 
-        df = load_data()
+    df = pd.read_csv(CSV_FILE)
 
-        if df.empty:
+    df = df[
+        df["status"] == "SUCCESS"
+    ]
 
-            return jsonify([])
+    if df.empty:
+        return jsonify([])
 
-        summary = (
-            df.groupby("condition")
-            .agg(
-                avg_cpu=("cpu_usage", "mean"),
-                avg_ram=("ram_usage", "mean"),
-                avg_disk=("disk_usage", "mean"),
-                total_sent=("data_sent_mb", "max"),
-                total_received=("data_received_mb", "max"),
-                samples=("cpu_usage", "count")
+    summary = (
+        df.groupby(
+            ["provider", "model"]
+        )
+        .agg(
+            avg_response_time=(
+                "response_time_sec",
+                "mean"
+            ),
+            avg_cpu=(
+                "cpu_avg",
+                "mean"
+            ),
+            peak_cpu=(
+                "cpu_peak",
+                "mean"
+            ),
+            avg_ram=(
+                "ram_avg",
+                "mean"
+            ),
+            peak_ram=(
+                "ram_peak",
+                "mean"
+            ),
+            avg_sent=(
+                "data_sent_mb",
+                "mean"
+            ),
+            avg_received=(
+                "data_received_mb",
+                "mean"
+            ),
+            avg_input_tokens=(
+                "input_tokens",
+                "mean"
+            ),
+            avg_output_tokens=(
+                "output_tokens",
+                "mean"
+            ),
+            avg_tokens_per_sec=(
+                "tokens_per_sec",
+                "mean"
+            ),
+            samples=(
+                "provider",
+                "count"
             )
-            .reset_index()
         )
+        .reset_index()
+    )
 
-        return jsonify(
-            summary.to_dict(orient="records")
+    return jsonify(
+        summary.to_dict(
+            orient="records"
         )
-
-    except Exception as e:
-
-        print("SUMMARY ERROR:", e)
-
-        return jsonify({
-            "error": str(e)
-        }), 500
+    )
 
 
 if __name__ == "__main__":
 
-    print("=" * 50)
-    print("AI PERFORMANCE ANALYZER")
-    print("=" * 50)
-
-    print(
-        f"Reading data from: {CSV_FILE}"
+    port = int(
+        os.environ.get(
+            "PORT",
+            5000
+        )
     )
 
-    try:
-
-        df = load_data()
-
-        print(
-            f"Measurements loaded: {len(df)}"
-        )
-
-        if not df.empty:
-
-            print(
-                "Conditions found:",
-                df["condition"].unique().tolist()
-            )
-
-    except Exception as e:
-
-        print(
-            "Could not load measurements:",
-            e
-        )
-
-    print("=" * 50)
-
-    app.run(debug=True)
+    app.run(
+        host="0.0.0.0",
+        port=port
+    )
