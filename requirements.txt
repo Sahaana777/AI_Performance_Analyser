@@ -4,3 +4,4 @@ matplotlib
 psutil
 requests
 gunicorn
+python-dotenv
