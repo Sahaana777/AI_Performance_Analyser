@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: ai-performance-analyzer
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn dashboard:app
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.5
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: CLOUD_BENCHMARK_TOKEN
+        sync: false
