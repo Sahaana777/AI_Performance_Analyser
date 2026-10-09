@@ -3,17 +3,81 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-CSV_FILE = "data/ai_measurements.csv"
-GRAPH_DIR = "graphs"
+# -------------------------------------------------
+# Paths
+# -------------------------------------------------
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+CSV_FILE = os.path.join(
+    BASE_DIR,
+    "data",
+    "ai_measurements.csv"
+)
+
+GRAPH_DIR = os.path.join(
+    BASE_DIR,
+    "graphs"
+)
+
+
+# -------------------------------------------------
+# Load benchmark data
+# -------------------------------------------------
 
 def load_data():
 
     if not os.path.exists(CSV_FILE):
+
         print("No benchmark data found.")
+        print("Expected file:")
+        print(CSV_FILE)
+
         return pd.DataFrame()
 
+    print("Loading:")
+    print(CSV_FILE)
+
     df = pd.read_csv(CSV_FILE)
+
+    print("\nCSV columns:")
+    print(df.columns.tolist())
+
+    # -------------------------------------------------
+    # Check required columns
+    # -------------------------------------------------
+
+    required_columns = [
+        "provider",
+        "model",
+        "response_time_sec",
+        "cpu_avg",
+        "cpu_peak",
+        "ram_avg",
+        "ram_peak",
+        "data_received_mb",
+        "tokens_per_sec"
+    ]
+
+    missing = [
+        column
+        for column in required_columns
+        if column not in df.columns
+    ]
+
+    if missing:
+
+        print("\nERROR: Missing columns:")
+        print(missing)
+
+        print("\nYour CSV contains:")
+        print(df.columns.tolist())
+
+        return pd.DataFrame()
+
+    # -------------------------------------------------
+    # Convert numeric columns
+    # -------------------------------------------------
 
     numeric_columns = [
         "response_time_sec",
@@ -32,25 +96,56 @@ def load_data():
     for column in numeric_columns:
 
         if column in df.columns:
+
             df[column] = pd.to_numeric(
                 df[column],
                 errors="coerce"
             )
 
-    df = df[
-        df["status"] == "SUCCESS"
-    ]
+    # -------------------------------------------------
+    # Filter successful experiments
+    # -------------------------------------------------
+
+    if "status" in df.columns:
+
+        df = df[
+            df["status"].astype(str).str.upper() == "SUCCESS"
+        ]
+
+    else:
+
+        print("\nWARNING:")
+        print("No 'status' column found.")
+        print("Assuming all rows are valid benchmark records.")
+
+    # Remove rows where provider is missing
+
+    df = df.dropna(
+        subset=["provider"]
+    )
 
     return df
 
 
+# -------------------------------------------------
+# Generate graphs
+# -------------------------------------------------
+
 def generate_graphs(df):
 
-    os.makedirs(GRAPH_DIR, exist_ok=True)
+    os.makedirs(
+        GRAPH_DIR,
+        exist_ok=True
+    )
 
     if df.empty:
-        print("No successful benchmark data.")
+
+        print("\nNo successful benchmark data.")
         return
+
+    # -------------------------------------------------
+    # Provider summary
+    # -------------------------------------------------
 
     summary = (
         df.groupby("provider")
@@ -59,26 +154,32 @@ def generate_graphs(df):
                 "response_time_sec",
                 "mean"
             ),
+
             avg_cpu=(
                 "cpu_avg",
                 "mean"
             ),
+
             peak_cpu=(
                 "cpu_peak",
                 "mean"
             ),
+
             avg_ram=(
                 "ram_avg",
                 "mean"
             ),
+
             peak_ram=(
                 "ram_peak",
                 "mean"
             ),
+
             avg_network_received=(
                 "data_received_mb",
                 "mean"
             ),
+
             avg_tokens_per_sec=(
                 "tokens_per_sec",
                 "mean"
@@ -108,7 +209,10 @@ def generate_graphs(df):
     plt.tight_layout()
 
     plt.savefig(
-        f"{GRAPH_DIR}/response_time.png"
+        os.path.join(
+            GRAPH_DIR,
+            "response_time.png"
+        )
     )
 
     plt.close()
@@ -134,7 +238,10 @@ def generate_graphs(df):
     plt.tight_layout()
 
     plt.savefig(
-        f"{GRAPH_DIR}/cpu_usage.png"
+        os.path.join(
+            GRAPH_DIR,
+            "cpu_usage.png"
+        )
     )
 
     plt.close()
@@ -160,7 +267,10 @@ def generate_graphs(df):
     plt.tight_layout()
 
     plt.savefig(
-        f"{GRAPH_DIR}/ram_usage.png"
+        os.path.join(
+            GRAPH_DIR,
+            "ram_usage.png"
+        )
     )
 
     plt.close()
@@ -186,7 +296,10 @@ def generate_graphs(df):
     plt.tight_layout()
 
     plt.savefig(
-        f"{GRAPH_DIR}/network_usage.png"
+        os.path.join(
+            GRAPH_DIR,
+            "network_usage.png"
+        )
     )
 
     plt.close()
@@ -212,19 +325,40 @@ def generate_graphs(df):
     plt.tight_layout()
 
     plt.savefig(
-        f"{GRAPH_DIR}/token_throughput.png"
+        os.path.join(
+            GRAPH_DIR,
+            "token_throughput.png"
+        )
     )
 
     plt.close()
 
+    # -------------------------------------------------
+    # Save summary
+    # -------------------------------------------------
+
     summary.to_csv(
-        f"{GRAPH_DIR}/provider_summary.csv",
+        os.path.join(
+            GRAPH_DIR,
+            "provider_summary.csv"
+        ),
         index=False
     )
 
     print("\nProvider Summary")
-    print(summary.to_string(index=False))
+    print(
+        summary.to_string(
+            index=False
+        )
+    )
 
+    print("\nGraphs saved in:")
+    print(GRAPH_DIR)
+
+
+# -------------------------------------------------
+# Main
+# -------------------------------------------------
 
 def main():
 
@@ -237,6 +371,7 @@ def main():
     print(len(df))
 
     print("\nProviders:")
+
     print(
         df["provider"]
         .unique()

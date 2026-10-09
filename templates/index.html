@@ -2,7 +2,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>Cloud AI Performance Analyzer</title>
@@ -10,324 +9,708 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+      :root {
+        --bg: #f4f7fb;
+        --card: #ffffff;
+        --primary: #2563eb;
+        --text: #172033;
+        --muted: #64748b;
+        --border: #e2e8f0;
+        --green: #15803d;
+        --shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        font-family: Arial, sans-serif;
         margin: 0;
-        padding: 30px;
-        background: #f4f6f8;
+        padding: 28px;
+        font-family: Arial, Helvetica, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 1450px;
+        margin: auto;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 28px;
       }
 
       h1 {
-        margin-bottom: 5px;
+        margin: 0 0 8px;
+        font-size: 30px;
       }
 
       .subtitle {
-        color: #666;
-        margin-bottom: 30px;
+        color: var(--muted);
+        margin: 0;
+        line-height: 1.5;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 13px;
+        background: #dcfce7;
+        color: var(--green);
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: bold;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        background: #16a34a;
+        border-radius: 50%;
+      }
+
+      .section-title {
+        font-size: 20px;
+        margin: 28px 0 16px;
       }
 
       .cards {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 18px;
+      }
 
-        gap: 20px;
-
-        margin-bottom: 30px;
+      .card,
+      .chart-box,
+      .table-box {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
       }
 
       .card {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        padding: 22px;
+        min-width: 0;
       }
 
-      .card h3 {
-        margin-top: 0;
+      .card-label {
+        color: var(--muted);
+        font-size: 14px;
+        margin-bottom: 14px;
+      }
+
+      .card-value {
+        font-size: 27px;
+        font-weight: bold;
+        overflow-wrap: anywhere;
+      }
+
+      .card-note {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 10px;
       }
 
       .charts {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-
-        gap: 25px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
       }
 
       .chart-box {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        padding: 22px;
+        min-width: 0;
       }
 
-      canvas {
-        max-height: 350px;
+      .chart-box h3 {
+        font-size: 17px;
+        margin: 0 0 8px;
+      }
+
+      .chart-description {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 0 0 18px;
+      }
+
+      .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+      }
+
+      .table-box {
+        overflow-x: auto;
       }
 
       table {
         width: 100%;
         border-collapse: collapse;
-        background: white;
-        margin-top: 30px;
+        min-width: 850px;
       }
 
       th,
       td {
-        padding: 12px;
-        border-bottom: 1px solid #ddd;
-        text-align: center;
+        padding: 15px 13px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        font-size: 13px;
+        white-space: nowrap;
       }
 
       th {
-        background: #eee;
+        background: #f8fafc;
+        color: #475569;
+        font-weight: bold;
+      }
+
+      tbody tr:hover {
+        background: #f8fafc;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      .message {
+        display: none;
+        padding: 15px 18px;
+        margin: 20px 0;
+        border-radius: 10px;
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        color: #9a3412;
+        line-height: 1.5;
+      }
+
+      .message.error {
+        display: block;
+      }
+
+      .message.info {
+        display: block;
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1d4ed8;
+      }
+
+      .refresh-button {
+        border: none;
+        background: var(--primary);
+        color: white;
+        padding: 11px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+      }
+
+      .refresh-button:hover {
+        background: #1d4ed8;
+      }
+
+      .refresh-button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+
+      footer {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+        margin: 25px 0 5px;
+      }
+
+      @media (max-width: 1000px) {
+        .cards {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .charts {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 600px) {
+        body {
+          padding: 16px;
+        }
+
+        h1 {
+          font-size: 24px;
+        }
+
+        .cards {
+          grid-template-columns: 1fr;
+        }
+
+        .card-value {
+          font-size: 24px;
+        }
+
+        .chart-box {
+          padding: 15px;
+        }
+
+        .chart-container {
+          height: 260px;
+        }
       }
     </style>
   </head>
 
   <body>
-    <h1>Cloud AI Performance Analyzer</h1>
+    <div class="container">
+      <header>
+        <div>
+          <h1>Cloud AI Performance Analyzer</h1>
+          <p class="subtitle">
+            Compare response speed, client-system resource usage, network
+            transfer and token throughput across AI providers.
+          </p>
+        </div>
 
-    <div class="subtitle">Comparative performance analysis of AI providers</div>
+        <button
+          class="refresh-button"
+          id="refreshButton"
+          onclick="loadDashboard()"
+        >
+          Refresh Data
+        </button>
+      </header>
 
-    <div class="cards">
-      <div class="card">
-        <h3>Providers</h3>
-        <p id="providerCount">-</p>
+      <div id="statusMessage" class="message" role="status"></div>
+
+      <section class="cards">
+        <div class="card">
+          <div class="card-label">Providers / Models</div>
+          <div class="card-value" id="providerCount">—</div>
+          <div class="card-note">Distinct provider-model combinations</div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Successful Samples</div>
+          <div class="card-value" id="sampleCount">—</div>
+          <div class="card-note">
+            Failed requests are excluded from averages
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Fastest Average Response</div>
+          <div class="card-value" id="fastestProvider">—</div>
+          <div class="card-note" id="fastestTime">Average response time</div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Highest Token Throughput</div>
+          <div class="card-value" id="bestThroughput">—</div>
+          <div class="card-note" id="throughputValue">
+            Average tokens per second
+          </div>
+        </div>
+      </section>
+
+      <h2 class="section-title">Performance Charts</h2>
+
+      <section class="charts">
+        <div class="chart-box">
+          <h3>Average Response Time</h3>
+          <p class="chart-description">
+            Lower values indicate faster responses.
+          </p>
+          <div class="chart-container">
+            <canvas id="responseChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-box">
+          <h3>Average CPU Usage</h3>
+          <p class="chart-description">
+            Average CPU utilization measured on the client machine.
+          </p>
+          <div class="chart-container">
+            <canvas id="cpuChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-box">
+          <h3>Average RAM Usage</h3>
+          <p class="chart-description">
+            Average system memory utilization during measurements.
+          </p>
+          <div class="chart-container">
+            <canvas id="ramChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-box">
+          <h3>Average Network Received</h3>
+          <p class="chart-description">
+            Received data recorded per benchmark request.
+          </p>
+          <div class="chart-container">
+            <canvas id="networkChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-box">
+          <h3>Average Token Throughput</h3>
+          <p class="chart-description">
+            Higher values indicate more output tokens per second.
+          </p>
+          <div class="chart-container">
+            <canvas id="tokenChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <h2 class="section-title">Provider Comparison</h2>
+
+      <div class="table-box">
+        <table>
+          <thead>
+            <tr>
+              <th>Provider</th>
+              <th>Model</th>
+              <th>Response (s)</th>
+              <th>CPU (%)</th>
+              <th>RAM (%)</th>
+              <th>Received (MB)</th>
+              <th>Tokens/sec</th>
+              <th>Samples</th>
+            </tr>
+          </thead>
+          <tbody id="summaryTable">
+            <tr>
+              <td colspan="8">Loading benchmark data...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <div class="card">
-        <h3>Benchmark Samples</h3>
-        <p id="sampleCount">-</p>
-      </div>
-
-      <div class="card">
-        <h3>Fastest Average Response</h3>
-        <p id="fastestProvider">-</p>
-      </div>
-
-      <div class="card">
-        <h3>Highest Token Throughput</h3>
-        <p id="bestThroughput">-</p>
-      </div>
+      <footer>
+        Metrics represent measurements recorded on the client machine while
+        interacting with cloud AI providers. They do not represent the
+        providers' internal server CPU or RAM usage. Results depend on the
+        tested models, prompts, network conditions and measurement method.
+      </footer>
     </div>
-
-    <div class="charts">
-      <div class="chart-box">
-        <h2>Response Time</h2>
-
-        <canvas id="responseChart"></canvas>
-      </div>
-
-      <div class="chart-box">
-        <h2>CPU Usage</h2>
-
-        <canvas id="cpuChart"></canvas>
-      </div>
-
-      <div class="chart-box">
-        <h2>RAM Usage</h2>
-
-        <canvas id="ramChart"></canvas>
-      </div>
-
-      <div class="chart-box">
-        <h2>Network Received</h2>
-
-        <canvas id="networkChart"></canvas>
-      </div>
-
-      <div class="chart-box">
-        <h2>Token Throughput</h2>
-
-        <canvas id="tokenChart"></canvas>
-      </div>
-    </div>
-
-    <h2>Provider Comparison</h2>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Provider</th>
-          <th>Model</th>
-          <th>Response Time</th>
-          <th>CPU</th>
-          <th>RAM</th>
-          <th>Network Received</th>
-          <th>Tokens/sec</th>
-          <th>Samples</th>
-        </tr>
-      </thead>
-
-      <tbody id="summaryTable"></tbody>
-    </table>
 
     <script>
-      let responseChart;
-      let cpuChart;
-      let ramChart;
-      let networkChart;
-      let tokenChart;
+      const chartInstances = {};
 
-      async function loadDashboard() {
-        const response = await fetch("/api/summary");
+      const chartColors = [
+        "#4285F4",
+        "#34A853",
+        "#FBBC05",
+        "#EA4335",
+        "#8B5CF6",
+        "#06B6D4",
+      ];
 
-        const data = await response.json();
-
-        if (!data.length) {
-          return;
+      function numberOrNull(value) {
+        if (value === null || value === undefined || value === "") {
+          return null;
         }
 
-        const providers = data.map((item) => item.provider);
-
-        document.getElementById("providerCount").innerText = data.length;
-
-        const responseTimes = data.map((item) => item.avg_response_time);
-
-        const cpuValues = data.map((item) => item.avg_cpu);
-
-        const ramValues = data.map((item) => item.avg_ram);
-
-        const networkValues = data.map((item) => item.avg_received);
-
-        const throughputValues = data.map((item) => item.avg_tokens_per_sec);
-
-        document.getElementById("sampleCount").innerText = data.reduce(
-          (sum, item) => sum + item.samples,
-          0,
-        );
-
-        const fastestIndex = responseTimes.indexOf(Math.min(...responseTimes));
-
-        document.getElementById("fastestProvider").innerText =
-          providers[fastestIndex];
-
-        const throughputIndex = throughputValues.indexOf(
-          Math.max(...throughputValues),
-        );
-
-        document.getElementById("bestThroughput").innerText =
-          providers[throughputIndex];
-
-        createChart(
-          "responseChart",
-          "Response Time (seconds)",
-          providers,
-          responseTimes,
-          "responseChart",
-        );
-
-        createChart(
-          "cpuChart",
-          "CPU Usage (%)",
-          providers,
-          cpuValues,
-          "cpuChart",
-        );
-
-        createChart(
-          "ramChart",
-          "RAM Usage (%)",
-          providers,
-          ramValues,
-          "ramChart",
-        );
-
-        createChart(
-          "networkChart",
-          "Network Received (MB)",
-          providers,
-          networkValues,
-          "networkChart",
-        );
-
-        createChart(
-          "tokenChart",
-          "Tokens / Second",
-          providers,
-          throughputValues,
-          "tokenChart",
-        );
-
-        const table = document.getElementById("summaryTable");
-
-        table.innerHTML = "";
-
-        data.forEach((item) => {
-          const row = document.createElement("tr");
-
-          row.innerHTML = `
-
-            <td>${item.provider}</td>
-
-            <td>${item.model}</td>
-
-            <td>
-                ${item.avg_response_time.toFixed(3)} s
-            </td>
-
-            <td>
-                ${item.avg_cpu.toFixed(2)} %
-            </td>
-
-            <td>
-                ${item.avg_ram.toFixed(2)} %
-            </td>
-
-            <td>
-                ${item.avg_received.toFixed(4)} MB
-            </td>
-
-            <td>
-                ${item.avg_tokens_per_sec.toFixed(2)}
-            </td>
-
-            <td>
-                ${item.samples}
-            </td>
-
-        `;
-
-          table.appendChild(row);
-        });
+        const number = Number(value);
+        return Number.isFinite(number) ? number : null;
       }
 
-      function createChart(canvasId, label, labels, values, chartVariable) {
-        if (window[chartVariable]) {
-          window[chartVariable].destroy();
+      function formatNumber(value, digits = 2) {
+        const number = numberOrNull(value);
+        return number === null ? "N/A" : number.toFixed(digits);
+      }
+
+      function showMessage(message, type = "error") {
+        const element = document.getElementById("statusMessage");
+
+        element.textContent = message;
+        element.className = "message " + type;
+      }
+
+      function clearMessage() {
+        const element = document.getElementById("statusMessage");
+        element.textContent = "";
+        element.className = "message";
+      }
+
+      function createChart(canvasId, label, labels, values, unit) {
+        const canvas = document.getElementById(canvasId);
+
+        if (!canvas) {
+          throw new Error("Chart canvas not found: " + canvasId);
         }
 
-        window[chartVariable] = new Chart(
-          document.getElementById(canvasId),
+        if (chartInstances[canvasId]) {
+          chartInstances[canvasId].destroy();
+        }
 
-          {
-            type: "bar",
+        chartInstances[canvasId] = new Chart(canvas, {
+          type: "bar",
 
-            data: {
-              labels: labels,
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: label,
+                data: values,
+                backgroundColor: labels.map(
+                  (_, index) => chartColors[index % chartColors.length],
+                ),
+                borderRadius: 6,
+                borderWidth: 0,
+              },
+            ],
+          },
 
-              datasets: [
-                {
-                  label: label,
-                  data: values,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+
+            plugins: {
+              legend: {
+                display: false,
+              },
+
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    const value = context.parsed.y;
+
+                    if (value === null || value === undefined) {
+                      return "No data";
+                    }
+
+                    return label + ": " + value.toFixed(3) + " " + unit;
+                  },
                 },
-              ],
+              },
             },
 
-            options: {
-              responsive: true,
+            scales: {
+              x: {
+                ticks: {
+                  maxRotation: 25,
+                  minRotation: 0,
+                },
+                grid: {
+                  display: false,
+                },
+              },
 
-              scales: {
-                y: {
-                  beginAtZero: true,
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: unit,
                 },
               },
             },
           },
-        );
+        });
+      }
+
+      function clearDashboard() {
+        Object.values(chartInstances).forEach((chart) => chart.destroy());
+
+        Object.keys(chartInstances).forEach((key) => {
+          delete chartInstances[key];
+        });
+
+        document.getElementById("providerCount").textContent = "—";
+        document.getElementById("sampleCount").textContent = "—";
+        document.getElementById("fastestProvider").textContent = "—";
+        document.getElementById("fastestTime").textContent =
+          "Average response time";
+        document.getElementById("bestThroughput").textContent = "—";
+        document.getElementById("throughputValue").textContent =
+          "Average tokens per second";
+
+        document.getElementById("summaryTable").innerHTML =
+          '<tr><td colspan="8">No successful benchmark data found.</td></tr>';
+      }
+
+      async function loadDashboard() {
+        const refreshButton = document.getElementById("refreshButton");
+
+        refreshButton.disabled = true;
+        refreshButton.textContent = "Loading...";
+
+        clearMessage();
+
+        try {
+          if (typeof Chart === "undefined") {
+            throw new Error(
+              "Chart.js did not load. Check your internet connection or CDN access.",
+            );
+          }
+
+          const response = await fetch("/api/summary", {
+            cache: "no-store",
+          });
+
+          if (!response.ok) {
+            throw new Error("The summary API returned HTTP " + response.status);
+          }
+
+          const data = await response.json();
+
+          if (!Array.isArray(data)) {
+            throw new Error(
+              data.error || "The summary API returned an unexpected response.",
+            );
+          }
+
+          if (data.length === 0) {
+            clearDashboard();
+            showMessage(
+              "No successful benchmark records are available. Check data/ai_measurements.csv and the Flask terminal.",
+              "info",
+            );
+            return;
+          }
+
+          const validData = data.map((item) => ({
+            provider: item.provider || "Unknown provider",
+            model: item.model || "Unknown model",
+            avg_response_time: numberOrNull(item.avg_response_time),
+            avg_cpu: numberOrNull(item.avg_cpu),
+            avg_ram: numberOrNull(item.avg_ram),
+            avg_received: numberOrNull(item.avg_received),
+            avg_tokens_per_sec: numberOrNull(item.avg_tokens_per_sec),
+            samples: numberOrNull(item.samples) ?? 0,
+          }));
+
+          const labels = validData.map(
+            (item) => item.provider + " (" + item.model + ")",
+          );
+
+          const responseTimes = validData.map((item) => item.avg_response_time);
+
+          const cpuValues = validData.map((item) => item.avg_cpu);
+          const ramValues = validData.map((item) => item.avg_ram);
+          const networkValues = validData.map((item) => item.avg_received);
+          const throughputValues = validData.map(
+            (item) => item.avg_tokens_per_sec,
+          );
+
+          document.getElementById("providerCount").textContent =
+            validData.length;
+
+          document.getElementById("sampleCount").textContent = validData.reduce(
+            (sum, item) => sum + item.samples,
+            0,
+          );
+
+          const fastest = validData
+            .filter((item) => item.avg_response_time !== null)
+            .sort((a, b) => a.avg_response_time - b.avg_response_time)[0];
+
+          document.getElementById("fastestProvider").textContent = fastest
+            ? fastest.provider
+            : "N/A";
+
+          document.getElementById("fastestTime").textContent = fastest
+            ? formatNumber(fastest.avg_response_time, 3) + " seconds average"
+            : "No response-time data";
+
+          const best = validData
+            .filter((item) => item.avg_tokens_per_sec !== null)
+            .sort((a, b) => b.avg_tokens_per_sec - a.avg_tokens_per_sec)[0];
+
+          document.getElementById("bestThroughput").textContent = best
+            ? best.provider
+            : "N/A";
+
+          document.getElementById("throughputValue").textContent = best
+            ? formatNumber(best.avg_tokens_per_sec, 2) + " tokens per second"
+            : "No throughput data";
+
+          createChart(
+            "responseChart",
+            "Average response time",
+            labels,
+            responseTimes,
+            "seconds",
+          );
+
+          createChart("cpuChart", "Average CPU usage", labels, cpuValues, "%");
+
+          createChart("ramChart", "Average RAM usage", labels, ramValues, "%");
+
+          createChart(
+            "networkChart",
+            "Average data received",
+            labels,
+            networkValues,
+            "MB",
+          );
+
+          createChart(
+            "tokenChart",
+            "Average token throughput",
+            labels,
+            throughputValues,
+            "tokens/sec",
+          );
+
+          const table = document.getElementById("summaryTable");
+          table.replaceChildren();
+
+          validData.forEach((item) => {
+            const row = document.createElement("tr");
+
+            const values = [
+              item.provider,
+              item.model,
+              item.avg_response_time === null
+                ? "N/A"
+                : formatNumber(item.avg_response_time, 3),
+              item.avg_cpu === null ? "N/A" : formatNumber(item.avg_cpu, 2),
+              item.avg_ram === null ? "N/A" : formatNumber(item.avg_ram, 2),
+              item.avg_received === null
+                ? "N/A"
+                : formatNumber(item.avg_received, 4),
+              item.avg_tokens_per_sec === null
+                ? "N/A"
+                : formatNumber(item.avg_tokens_per_sec, 2),
+              String(item.samples),
+            ];
+
+            values.forEach((value) => {
+              const cell = document.createElement("td");
+              cell.textContent = value;
+              row.appendChild(cell);
+            });
+
+            table.appendChild(row);
+          });
+        } catch (error) {
+          console.error("Dashboard loading failed:", error);
+
+          showMessage(
+            "Could not load the dashboard: " +
+              error.message +
+              " Open /api/debug and check the browser console for details.",
+          );
+        } finally {
+          refreshButton.disabled = false;
+          refreshButton.textContent = "Refresh Data";
+        }
       }
 
       loadDashboard();
     </script>
   </body>
 </html>
+```

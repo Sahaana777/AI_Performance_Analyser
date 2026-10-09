@@ -32,7 +32,19 @@ PROMPTS = {
 
     "P2": "Write a short Python program to find the largest number in a list.",
 
-    "P3": "Explain the difference between TCP and UDP."
+    "P3": "Explain the difference between TCP and UDP.",
+
+    "P4": "Explain what a database index is and why it improves query performance.",
+
+    "P5": "Write a Python function to check whether a string is a palindrome.",
+
+    "P6": "Explain the difference between a process and a thread.",
+
+    "P7": "What is the time complexity of merge sort? Explain briefly.",
+
+    "P8": "Write a short SQL query to find the second highest salary from an employee table.",
+
+    "P9": "Explain how HTTPS protects data during communication between a browser and a server."
 }
 
 
@@ -291,98 +303,57 @@ def call_openrouter(model, prompt):
 # ============================================================
 
 
-def call_gemini(model, prompt):
-
-    api_key = os.getenv(
-        "GEMINI_API_KEY"
-    )
-
-    if not api_key:
-
-        raise ValueError(
-            "GEMINI_API_KEY is not set."
-        )
-
-    url = (
-
-        "https://generativelanguage.googleapis.com/"
-        f"v1beta/models/{model}:generateContent"
-
-    )
+def call_gemini(model, prompt, api_key):
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
     headers = {
-
-        "x-goog-api-key":
-            api_key,
-
-        "Content-Type":
-            "application/json"
-
+        "x-goog-api-key": api_key,
+        "Content-Type": "application/json"
     }
 
     payload = {
-
         "contents": [
-
             {
-
                 "parts": [
-
                     {
-
-                        "text":
-                            prompt
-
+                        "text": prompt
                     }
-
                 ]
-
             }
-
         ]
-
     }
 
-    response = requests.post(
+    max_retries = 3
 
-        url,
+    for attempt in range(max_retries):
+        response = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=(30, 180)
+        )
 
-        headers=headers,
+        if response.status_code == 200:
+            return response.json()
 
-        json=payload,
+        if response.status_code in [429, 500, 503]:
+            if attempt < max_retries - 1:
+                wait_time = 5 * (attempt + 1)
+                print(
+                    f"Gemini returned {response.status_code}. "
+                    f"Retrying in {wait_time}s..."
+                )
+                time.sleep(wait_time)
+                continue
 
-        timeout=180
+        response.raise_for_status()
 
-    )
-
-    response.raise_for_status()
-
-    data = response.json()
-
-    usage = data.get(
-        "usageMetadata",
-        {}
-    )
-
-    input_tokens = usage.get(
-        "promptTokenCount",
-        0
-    )
-
-    output_tokens = usage.get(
-        "candidatesTokenCount",
-        0
-    )
-
-    return (
-        input_tokens,
-        output_tokens
-    )
-
+    raise Exception("Gemini failed after all retry attempts")
 
 # ============================================================
 # GROQ
 # ============================================================
+
 
 def call_groq(model, prompt):
 
@@ -437,7 +408,7 @@ def call_groq(model, prompt):
 
         json=payload,
 
-        timeout=180
+        timeout=(30, 180)
 
     )
 
@@ -470,11 +441,7 @@ def call_groq(model, prompt):
 # SELECT PROVIDER
 # ============================================================
 
-def call_provider(
-    provider,
-    model,
-    prompt
-):
+def call_provider(provider, model, prompt):
 
     if provider == "Openrouter AI":
 
@@ -485,9 +452,36 @@ def call_provider(
 
     elif provider == "Google Gemini":
 
-        return call_gemini(
+        api_key = os.getenv("GEMINI_API_KEY")
+
+        if not api_key:
+            raise ValueError(
+                "GEMINI_API_KEY is not set."
+            )
+
+        response = call_gemini(
             model,
-            prompt
+            prompt,
+            api_key
+        )
+
+        # Gemini returns a JSON response.
+        # Extract token usage from usageMetadata.
+        usage = response.get("usageMetadata", {})
+
+        input_tokens = usage.get(
+            "promptTokenCount",
+            0
+        )
+
+        output_tokens = usage.get(
+            "candidatesTokenCount",
+            0
+        )
+
+        return (
+            input_tokens,
+            output_tokens
         )
 
     elif provider == "Groq":
@@ -502,11 +496,10 @@ def call_provider(
         raise ValueError(
             f"Unknown provider: {provider}"
         )
-
-
 # ============================================================
 # RUN ONE BENCHMARK TEST
 # ============================================================
+
 
 def run_test(
     provider,
